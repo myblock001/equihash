@@ -47,7 +47,10 @@ static CBlock BuildBlockTestCase() {
     bool mutated;
     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);
     assert(!mutated);
-    while (!CheckProofOfWork(block.GetPoWHash(), block.nBits, Params().GetConsensus())) ++block.nNonce;
+    while (!CheckProofOfWork(block.GetPoWHash(), block.nBits, Params().GetConsensus()))
+    {
+         block.nNonce = ArithToUint256(UintToArith256(block.nNonce) + 1);
+    }
     return block;
 }
 
@@ -257,7 +260,7 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
         CBlock block2;
         PartiallyDownloadedBlock partialBlockCopy = partialBlock;
         BOOST_CHECK(partialBlock.FillBlock(block2, {}) == READ_STATUS_OK);
-        BOOST_CHECK_EQUAL(block.GePoWtHash().ToString(), block2.GetPoWHash().ToString());
+        BOOST_CHECK_EQUAL(block.GetPoWHash().ToString(), block2.GetPoWHash().ToString());
         bool mutated;
         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());
         BOOST_CHECK(!mutated);
@@ -289,8 +292,10 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)
     bool mutated;
     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);
     assert(!mutated);
-    while (!CheckProofOfWork(block.GetPoWHash(), block.nBits, Params().GetConsensus())) ++block.nNonce;
-
+    while (!CheckProofOfWork(block.GetPoWHash(), block.nBits, Params().GetConsensus()))
+    {
+           block.nNonce = ArithToUint256(UintToArith256(block.nNonce) + 1);
+    }
     // Test simple header round-trip with only coinbase
     {
         CBlockHeaderAndShortTxIDs shortIDs(block, false);
