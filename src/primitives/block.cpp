@@ -9,17 +9,44 @@
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 #include "crypto/common.h"
+#include "chainparams.h"
+#include "consensus/params.h"
 #include "crypto/scrypt.h"
+#include "streams.h"
+
+uint256 CBlockHeader::GetHash(const Consensus::Params& params) const
+{
+    int version;
+    if (nHeight >= (uint32_t)params.XLCHeight) {
+        version = PROTOCOL_VERSION;
+    } else {
+        version = PROTOCOL_VERSION | SERIALIZE_BLOCK_LEGACY;
+    }
+    CHashWriter writer(SER_GETHASH, version);
+    ::Serialize(writer, *this);
+    return writer.GetHash();
+}
 
 uint256 CBlockHeader::GetHash() const
 {
-    return SerializeHash(*this);
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    return GetHash(consensusParams);
 }
 
 uint256 CBlockHeader::GetPoWHash() const
 {
+    int version;
+    const Consensus::Params& params = Params().GetConsensus();
+    if (nHeight >= (uint32_t)params.XLCHeight) {
+        version = PROTOCOL_VERSION;
+    } else {
+        version = PROTOCOL_VERSION | SERIALIZE_BLOCK_LEGACY;
+    }
+    CDataStream ss(SER_NETWORK,version);
+    ss << *this;
+    assert(ss.size()==80);
     uint256 thash;
-    scrypt_1024_1_1_256(BEGIN(nVersion), BEGIN(thash));
+    scrypt_1024_1_1_256(BEGIN(ss[0]), BEGIN(thash));
     return thash;
 }
 

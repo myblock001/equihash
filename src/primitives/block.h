@@ -13,6 +13,10 @@
 #include "version.h"
 #include <string.h>
 
+namespace Consensus {
+    struct Params;
+};
+
 static const int SERIALIZE_BLOCK_LEGACY = 0x04000000;
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
@@ -94,6 +98,7 @@ public:
     }
 
     uint256 GetHash() const;
+    uint256 GetHash(const Consensus::Params& params) const;
 
     uint256 GetPoWHash() const;
 
