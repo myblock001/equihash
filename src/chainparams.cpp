@@ -11,8 +11,16 @@
 #include "utilstrencodings.h"
 
 #include <assert.h>
-
+#include "crypto/equihash.h"
+#include "net.h"
+#include "validation.h"
 #include "chainparamsseeds.h"
+
+#define equihash_parameters_acceptable(N, K) \
+    ((CBlockHeader::HEADER_SIZE + equihash_solution_size(N, K))*MAX_HEADERS_RESULTS < \
+     MAX_PROTOCOL_MESSAGE_LENGTH-1000)
+
+
 
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
@@ -27,10 +35,11 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     CBlock genesis;
     genesis.nTime    = nTime;
     genesis.nBits    = nBits;
-    genesis.nNonce   = nNonce;
+    genesis.nNonce   = ArithToUint256(arith_uint256(nNonce));
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
     genesis.hashPrevBlock.SetNull();
+    genesis.nHeight  = 0;
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
     return genesis;
 }
@@ -79,9 +88,18 @@ public:
         consensus.BIP34Hash = uint256S("fa09d204a83a768ed5a7c8d441fa62f2043abf420cff1226c7b4329aeb9d51cf");
         consensus.BIP65Height = 918684; // bab3041e8977e0dc3eeff63fe707b92bde1dd449d8efafb248c27c8264cc311a
         consensus.BIP66Height = 811879; // 7aceee012833fa8952f8835d8b1b3ae233cd6ab08fdb27a771d2bd7bdc491894
-        consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); 
-        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        consensus.nPowTargetSpacing = 2.5 * 60;
+        consensus.powLimit = uint256S("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        // hard fork
+        consensus.powLimitFork = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.XLCHeight = 1366296 ;
+        const size_t N = 200, K = 9;
+        BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
+        nEquihashN = N;
+        nEquihashK = K;
+
+        consensus.nPowTargetTimespan = 60 * 60; // 3.5 days
+        consensus.nPowTargetSpacing = 1 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064
@@ -186,9 +204,19 @@ public:
         consensus.BIP34Hash = uint256S("8075c771ed8b495ffd943980a95f702ab34fce3c8c54e379548bda33cc8c0573");
         consensus.BIP65Height = 76; // 8075c771ed8b495ffd943980a95f702ab34fce3c8c54e379548bda33cc8c0573
         consensus.BIP66Height = 76; // 8075c771ed8b495ffd943980a95f702ab34fce3c8c54e379548bda33cc8c0573
-        consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        consensus.nPowTargetSpacing = 2.5 * 60;
+        consensus.powLimit = uint256S("0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        // hard fork
+        consensus.XLCHeight = 461262;
+        consensus.powLimitFork = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        const size_t N = 200, K = 9;  // Same as mainchain.
+        BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
+        nEquihashN = N;
+        nEquihashK = K;
+
+        consensus.nPowTargetTimespan = 60 * 60; // 3.5 days
+        consensus.nPowTargetSpacing = 1 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
@@ -274,6 +302,13 @@ public:
         consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)
         consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
         consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        // hard fork
+        const size_t N = 48, K = 5;
+        BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
+        nEquihashN = N;
+        nEquihashK = K;
+
         consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 2.5 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
@@ -296,11 +331,11 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x00");
 
-        pchMessageStart[0] = 0xfa;
-        pchMessageStart[1] = 0xbf;
+        pchMessageStart[0] = 0xf2;
+        pchMessageStart[1] = 0xb1;
         pchMessageStart[2] = 0xb5;
-        pchMessageStart[3] = 0xda;
-        nDefaultPort = 19444;
+        pchMessageStart[3] = 0xd5;
+        nDefaultPort = 29445;
         nPruneAfterHeight = 1000;
 
         genesis = CreateGenesisBlock(1296688602, 0, 0x207fffff, 1, 50 * COIN);

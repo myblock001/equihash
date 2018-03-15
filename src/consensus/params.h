@@ -48,7 +48,8 @@ struct Params {
     int BIP66Height;
 
     /** Block height at which XLitecoin hard fork becomes active */
-    int XLTCHeight;
+    int XLCHeight;
+    uint256 powLimitFork ;
 
     /**
      * Minimum blocks including miner confirmation of the total of 2016 blocks in a retargeting period,

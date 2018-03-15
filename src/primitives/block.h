@@ -6,9 +6,14 @@
 #ifndef BITCOIN_PRIMITIVES_BLOCK_H
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
+#include "arith_uint256.h"
 #include "primitives/transaction.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "version.h"
+#include <string.h>
+
+static const int SERIALIZE_BLOCK_LEGACY = 0x04000000;
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -20,7 +25,7 @@
 class CBlockHeader
 {
 public:
-    /*Added by Gold*/
+    /*Hard fork*/
     static const size_t HEADER_SIZE = 4+32+32+4+4+4;  // Excluding Equihash solution
     /////////////////
 
@@ -34,7 +39,7 @@ public:
     uint32_t nBits;
     uint256 nNonce;
 
-    /*Added by Gold*/
+    /*Hard fork*/
     std::vector<unsigned char> nSolution;  // Equihash solution.
     /////////////////
 
@@ -46,26 +51,37 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream& s, Operation ser_action)
+    {
+        bool new_format = !(s.GetVersion() & SERIALIZE_BLOCK_LEGACY);
         READWRITE(this->nVersion);
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
-        READWRITE(nHeight);
-        for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++) {
-            READWRITE(nReserved[i]);
+        if (new_format) {
+            READWRITE(nHeight);
+            for(size_t i = 0; i < (sizeof(nReserved) / sizeof(nReserved[0])); i++) {
+                READWRITE(nReserved[i]);
+            }
         }
         READWRITE(nTime);
         READWRITE(nBits);
-        READWRITE(nNonce);
-        READWRITE(nSolution);
+        if (new_format) {
+            READWRITE(nNonce);
+            READWRITE(nSolution);
+        } else {
+            uint32_t legacy_nonce = (uint32_t)nNonce.GetUint64(0);
+            READWRITE(legacy_nonce);
+            nNonce = ArithToUint256(arith_uint256(legacy_nonce));
+        }
     }
 
     void SetNull()
     {
         nVersion = 0;
-        nHeight = 0;
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
+        nHeight = 0;
+        memset(nReserved, 0, sizeof(nReserved));
         nTime = 0;
         nBits = 0;
         nNonce.SetNull();

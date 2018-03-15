@@ -1021,9 +1021,19 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
 
-    // Check the header
-    if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
-        return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+
+    // Check Equihash solution
+    bool postfork = block.nHeight >= (uint32_t)consensusParams.XLCHeight;
+    if(postfork)
+        if (!CheckEquihashSolution(&block, Params())) {
+            return error("ReadBlockFromDisk: Errors in block header at %s (bad Equihash solution)", pos.ToString());
+        }
+        else
+        {
+            // Check the header
+            if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
+                return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+        }
 
     return true;
 }
@@ -2803,6 +2813,15 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
 
 static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
+    // Check Equihash solution is valid
+    bool postfork = block.nHeight >= (uint32_t)consensusParams.XLCHeight;
+    if (fCheckPOW && postfork && !CheckEquihashSolution(&block, Params())) {
+        LogPrintf("CheckBlockHeader(): Equihash solution invalid at height %d\n", block.nHeight);
+        return state.DoS(100, error("CheckBlockHeader(): Equihash solution invalid"),
+                         REJECT_INVALID, "invalid-solution");
+    }
+
+
     // Check proof of work matches claimed amount
     if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");

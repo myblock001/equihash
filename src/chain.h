@@ -211,7 +211,8 @@ public:
     uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
-    unsigned int nNonce;
+    uint256 nNonce;
+    std::vector<unsigned char> nSolution;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
@@ -239,7 +240,7 @@ public:
         hashMerkleRoot = uint256();
         nTime          = 0;
         nBits          = 0;
-        nNonce         = 0;
+        nNonce         = uint256();
     }
 
     CBlockIndex()
@@ -253,6 +254,7 @@ public:
 
         nVersion       = block.nVersion;
         hashMerkleRoot = block.hashMerkleRoot;
+        nHeight        = block.nHeight;
         nTime          = block.nTime;
         nBits          = block.nBits;
         nNonce         = block.nNonce;
@@ -283,9 +285,11 @@ public:
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
+        block.nHeight        = nHeight;
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.nSolution      = nSolution;
         return block;
     }
 

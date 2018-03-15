@@ -135,7 +135,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
-        if (pblock->nHeight < (uint32_t)params.GetConsensus().XLTCHeight)
+        if (pblock->nHeight < (uint32_t)params.GetConsensus().XLCHeight)
         {
             // Solve sha256d.
             while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus())) {
