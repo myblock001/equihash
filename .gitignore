@@ -20,7 +20,7 @@ src/xlcd
 *oject.creator
 *oject.files
 *oject.includes
-
+*oject.creator.user
 
 # autoreconf
 Makefile.in
