@@ -8,6 +8,15 @@ src/litecoin-tx
 src/test/test_litecoin
 src/test/test_litecoin_fuzzy
 src/qt/test/test_litecoin-qt
+src/bench/bench_bitcoin
+src/bitcoin-tx
+src/qt/bitcoin-qt
+src/qt/test/test_bitcoin-qt
+src/test/test_bitcoin
+src/test/test_bitcoin_fuzzy
+src/xlc-cli
+src/xlcd
+
 
 # autoreconf
 Makefile.in

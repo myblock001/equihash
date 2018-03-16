@@ -1101,9 +1101,10 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                                                  ? SERIALIZE_BLOCK_LEGACY : 0);
 
                     if (inv.type == MSG_BLOCK)
-                        connman->PushMessage(pfrom, msgMaker.Make(SERIALIZE_TRANSACTION_NO_WITNESS, NetMsgType::BLOCK, *pblock));
+                        connman->PushMessage(pfrom, msgMaker.Make(legacy_block_flag | SERIALIZE_TRANSACTION_NO_WITNESS,
+                                                                 NetMsgType::BLOCK, *pblock));
                     else if (inv.type == MSG_WITNESS_BLOCK)
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::BLOCK, *pblock));
+                        connman->PushMessage(pfrom, msgMaker.Make(legacy_block_flag, NetMsgType::BLOCK, *pblock));
                     else if (inv.type == MSG_FILTERED_BLOCK)
                     {
                         bool sendMerkleBlock = false;
@@ -1116,7 +1117,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                             }
                         }
                         if (sendMerkleBlock) {
-                            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MERKLEBLOCK, merkleBlock));
+                            connman->PushMessage(pfrom, msgMaker.Make(legacy_block_flag, NetMsgType::MERKLEBLOCK, merkleBlock));
                             // CMerkleBlock just contains hashes, so also push any transactions in the block the client did not see
                             // This avoids hurting performance by pointlessly requiring a round-trip
                             // Note that there is currently no way for a node to request any single transactions we didn't send here -
@@ -1125,8 +1126,9 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                             // however we MUST always provide at least what the remote peer needs
                             typedef std::pair<unsigned int, uint256> PairType;
                             for (PairType& pair : merkleBlock.vMatchedTxn)
-                                connman->PushMessage(pfrom, msgMaker.Make(SERIALIZE_TRANSACTION_NO_WITNESS, NetMsgType::TX, *pblock->vtx[pair.first]));
-                        }
+                                connman->PushMessage(
+                                    pfrom, msgMaker.Make(legacy_block_flag | SERIALIZE_TRANSACTION_NO_WITNESS,
+                                                         NetMsgType::TX, *pblock->vtx[pair.first]));                        }
                         // else
                             // no response
                     }
@@ -1137,7 +1139,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                         // and we don't feel like constructing the object for them, so
                         // instead we respond with the full, non-compact block.
                         bool fPeerWantsWitness = State(pfrom->GetId())->fWantsCmpctWitness;
-                        int nSendFlags = fPeerWantsWitness ? 0 : SERIALIZE_TRANSACTION_NO_WITNESS;
+                        int nSendFlags = legacy_block_flag | (fPeerWantsWitness ? 0 : SERIALIZE_TRANSACTION_NO_WITNESS);
                         if (CanDirectFetch(consensusParams) && mi->second->nHeight >= chainActive.Height() - MAX_CMPCTBLOCK_DEPTH) {
                             if ((fPeerWantsWitness || !fWitnessesPresentInARecentCompactBlock) && a_recent_compact_block && a_recent_compact_block->header.GetHash() == mi->second->GetBlockHash()) {
                                 connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, *a_recent_compact_block));
@@ -2055,7 +2057,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         // in the SendMessages logic.
         nodestate->pindexBestHeaderSent = pindex ? pindex : chainActive.Tip();
         int legacy_block_flag = pfrom->IsLegacyBlockHeader(pfrom->GetSendVersion()) ? SERIALIZE_BLOCK_LEGACY : 0;
-        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
+        connman->PushMessage(pfrom, msgMaker.Make(legacy_block_flag, NetMsgType::HEADERS, vHeaders));
     }
 
 
@@ -3339,7 +3341,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                                 vHeaders.front().GetHash().ToString(), pto->GetId());
                     }
                     int legacy_block_flag = pto->IsLegacyBlockHeader(pto->GetSendVersion()) ? SERIALIZE_BLOCK_LEGACY : 0;
-                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
+                    connman->PushMessage(pto, msgMaker.Make(legacy_block_flag, NetMsgType::HEADERS, vHeaders));
                     state.pindexBestHeaderSent = pBestIndex;
                 } else
                     fRevertToInv = true;

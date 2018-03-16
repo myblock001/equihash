@@ -851,7 +851,7 @@ public:
     //! Sets the addrName only if it was not previously set
     void MaybeSetAddrName(const std::string& addrNameIn);
 
-    bool IsLegacyBlockHeader(int version) { return version < LTC_HARD_FORK_VERSION; };
+    bool IsLegacyBlockHeader(int version) { return version < XLC_HARD_FORK_VERSION; };
 };
 
 
