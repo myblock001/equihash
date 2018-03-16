@@ -16,6 +16,10 @@ src/test/test_bitcoin
 src/test/test_bitcoin_fuzzy
 src/xlc-cli
 src/xlcd
+*oject.config
+*oject.creator
+*oject.files
+*oject.includes
 
 
 # autoreconf
