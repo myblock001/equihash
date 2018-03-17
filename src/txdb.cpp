@@ -295,15 +295,9 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 // While it is technically feasible to verify the PoW, doing so takes several minutes as it
                 // requires recomputing every PoW hash during every Litecoin startup.
                 // We opt instead to simply trust the data that is on your local disk.
-<<<<<<< HEAD
 //                bool postfork = pindexNew->nHeight >= consensusParams.XLCHeight;
 //                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, postfork, consensusParams))
 //                    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
-=======
-                bool postfork = pindexNew->nHeight >= consensusParams.XLCHeight;
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, postfork, consensusParams))
-                    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
->>>>>>> 20cac255bd950b82c3527d9d88f00d04f75c1a97
                 pcursor->Next();
             } else {
                 return error("%s: failed to read value", __func__);

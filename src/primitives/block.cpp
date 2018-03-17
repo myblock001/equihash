@@ -42,7 +42,6 @@ uint256 CBlockHeader::GetPoWHash() const
         return GetHash();//hard fork;
     } else {
         version = PROTOCOL_VERSION | SERIALIZE_BLOCK_LEGACY;
-        return GetHash();//hard fork;
     }
     CDataStream ss(SER_NETWORK,version);
     ss << *this;
