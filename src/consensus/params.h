@@ -50,7 +50,9 @@ struct Params {
     /** Block height at which XLitecoin hard fork becomes active */
     int XLCHeight;
     uint256 powLimitFork ;
-
+    /** Premining blocks for Bitcoin GPU hard fork **/
+    int XLCPremineWindow;
+    bool XLCPremineEnforceWhitelist;
     /**
      * Minimum blocks including miner confirmation of the total of 2016 blocks in a retargeting period,
      * (nPowTargetTimespan / nPowTargetSpacing) which is also used for BIP9 deployments.

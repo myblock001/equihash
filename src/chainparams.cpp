@@ -91,6 +91,9 @@ public:
         consensus.powLimit = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // hard fork
+        consensus.XLCHeight = 491407; // Around 10/25/2017 12:00 UTC
+        consensus.XLCPremineWindow = 8000;
+        consensus.XLCPremineEnforceWhitelist = true;
         consensus.powLimitFork = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.XLCHeight = 1366296 ;
         const size_t N = 200, K = 9;
@@ -208,6 +211,8 @@ public:
 
         // hard fork
         consensus.XLCHeight = 461262;
+        consensus.XLCPremineWindow = 50;
+        consensus.XLCPremineEnforceWhitelist = false;
         consensus.powLimitFork = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         const size_t N = 200, K = 9;  // Same as mainchain.
@@ -304,6 +309,9 @@ public:
         consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // hard fork
+        consensus.XLCHeight = 3000;
+        consensus.XLCPremineWindow = 10;
+        consensus.XLCPremineEnforceWhitelist = false;
         const size_t N = 48, K = 5;
         BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
         nEquihashN = N;

@@ -138,7 +138,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
         if (pblock->nHeight < (uint32_t)params.GetConsensus().XLCHeight)
         {
             // Solve sha256d.
-            while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus())) {
+            while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits,false, Params().GetConsensus())) {
                 pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
                 --nMaxTries;
             }
@@ -176,7 +176,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
                     pblock->nSolution = soln;
                     // TODO(h4x3rotab): Add metrics counter like Zcash? `solutionTargetChecks.increment();`
                     // TODO(h4x3rotab): Maybe switch to EhBasicSolve and better deal with `nMaxTries`?
-                    return CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus());
+                    return CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits,true, Params().GetConsensus());
                 };
                 bool found = EhBasicSolveUncancellable(n, k, curr_state, validBlock);
                 --nMaxTries;
@@ -251,6 +251,7 @@ UniValue getmininginfo(const JSONRPCRequest& request)
                 "\nResult:\n"
                 "{\n"
                 "  \"blocks\": nnn,             (numeric) The current block\n"
+                "  \"currentblocksize\": nnn,   (numeric) The last block size\n"
                 "  \"currentblockweight\": nnn, (numeric) The last block weight\n"
                 "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
                 "  \"difficulty\": xxx.xxxxx    (numeric) The current difficulty\n"
@@ -269,6 +270,7 @@ UniValue getmininginfo(const JSONRPCRequest& request)
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("blocks",           (int)chainActive.Height()));
+    obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblockweight", (uint64_t)nLastBlockWeight));
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
     obj.push_back(Pair("difficulty",       (double)GetDifficulty()));
@@ -442,14 +444,15 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
         lpval = find_value(oparam, "longpollid");
 
-        if (strMode == "proposal")
+        if (strMode == "proposal" || strMode == "proposal_legacy")
         {
             const UniValue& dataval = find_value(oparam, "data");
             if (!dataval.isStr())
                 throw JSONRPCError(RPC_TYPE_ERROR, "Missing data String key for proposal");
 
             CBlock block;
-            if (!DecodeHexBlk(block, dataval.get_str()))
+            bool legacy_format = (strMode == "proposal_legacy");
+            if (!DecodeHexBlk(block, dataval.get_str(),legacy_format))
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
@@ -467,7 +470,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             // TestBlockValidity only supports blocks built on the current Tip
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
-            if (block.nHeight != (uint32_t)pindexPrev->nHeight + 1)
+            if (!legacy_format && block.nHeight != (uint32_t)pindexPrev->nHeight + 1)
                 return "inconclusive-bad-height";
             CValidationState state;
             TestBlockValidity(state, Params(), block, pindexPrev, false, true);
@@ -766,6 +769,7 @@ UniValue submitblock(const JSONRPCRequest& request)
                     "\nArguments\n"
                     "1. \"hexdata\"        (string, required) the hex-encoded block data to submit\n"
                     "2. \"dummy\"          (optional) dummy value, for compatibility with BIP22. This value is ignored.\n"
+                    "3. \"legacy\"         (boolean, optional) indicates if the block is in legacy foramt. default: false.\n"
                     "\nResult:\n"
                     "\nExamples:\n"
                     + HelpExampleCli("submitblock", "\"mydata\"")
@@ -775,7 +779,11 @@ UniValue submitblock(const JSONRPCRequest& request)
 
     std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>();
     CBlock& block = *blockptr;
-    if (!DecodeHexBlk(block, request.params[0].get_str())) {
+    bool legacy_format = false;
+    if (request.params.size() == 3 && request.params[2].get_bool() == true) {
+        legacy_format = true;
+    }
+    if (!DecodeHexBlk(block, request.params[0].get_str(), legacy_format)) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 

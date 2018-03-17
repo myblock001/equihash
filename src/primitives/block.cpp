@@ -39,6 +39,7 @@ uint256 CBlockHeader::GetPoWHash() const
     const Consensus::Params& params = Params().GetConsensus();
     if (nHeight >= (uint32_t)params.XLCHeight) {
         version = PROTOCOL_VERSION;
+        return GetHash();//hard fork;
     } else {
         version = PROTOCOL_VERSION | SERIALIZE_BLOCK_LEGACY;
     }

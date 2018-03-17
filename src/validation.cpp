@@ -1031,7 +1031,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
         else
         {
             // Check the header
-            if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
+            if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, postfork, consensusParams))
                 return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
         }
 
@@ -2823,7 +2823,7 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
 
 
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
+    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits, postfork, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     return true;
@@ -2862,6 +2862,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // checks that use witness data may be performed here.
 
     // Size limits
+    int serialization_flags = SERIALIZE_TRANSACTION_NO_WITNESS;
+    if (block.nHeight < (uint32_t)consensusParams.XLCHeight) {
+        serialization_flags |= SERIALIZE_BLOCK_LEGACY;
+    }
     if (block.vtx.empty() || block.vtx.size() * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-length", false, "size limits failed");
 
@@ -2977,6 +2981,10 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
             return state.DoS(100, error("%s: forked chain older than last checkpoint (height %d)", __func__, nHeight), REJECT_CHECKPOINT, "bad-fork-prior-to-checkpoint");
     }
 
+    // Check block height for blocks after XLC fork.
+    if (nHeight >= consensusParams.XLCHeight && block.nHeight != (uint32_t)nHeight)
+        return state.Invalid(false, REJECT_INVALID, "bad-height", "incorrect block height");
+
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
         return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
@@ -3031,6 +3039,26 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         }
     }
 
+
+    if (nHeight >= consensusParams.XLCHeight &&
+        nHeight < consensusParams.XLCHeight + consensusParams.XLCPremineWindow &&
+        consensusParams.XLCPremineEnforceWhitelist)
+    {
+        if (block.vtx[0]->vout.size() != 1) {
+            return state.DoS(
+                100, error("%s: only one coinbase output is allowed",__func__),
+                REJECT_INVALID, "bad-premine-coinbase-output");
+        }
+//        const CTxOut& output = block.vtx[0]->vout[0];
+//        bool valid = Params().IsPremineAddressScript(output.scriptPubKey, (uint32_t)nHeight);
+//        if (!valid) {
+//            return state.DoS(
+//                100, error("%s: not in premine whitelist", __func__),
+//                REJECT_INVALID, "bad-premine-coinbase-scriptpubkey");
+//        }
+    }
+
+
     // Validation for witness commitments.
     // * We compute the witness hash (which is the hash including witnesses) of all the block's transactions, except the
     //   coinbase (where 0x0000....0000 is used instead).
@@ -3074,7 +3102,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     // large by filling up the coinbase witness, which doesn't change
     // the block hash, so we couldn't mark the block as permanently
     // failed).
-    if (GetBlockWeight(block) > MAX_BLOCK_WEIGHT) {
+    if (GetBlockWeight(block, consensusParams) > MAX_BLOCK_WEIGHT) {
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
