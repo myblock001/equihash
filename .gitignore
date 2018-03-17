@@ -21,6 +21,7 @@ src/xlcd
 *oject.files
 *oject.includes
 *oject.creator.user
+core
 
 # autoreconf
 Makefile.in
