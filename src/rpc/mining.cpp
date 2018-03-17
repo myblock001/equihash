@@ -138,7 +138,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
         if (pblock->nHeight < (uint32_t)params.GetConsensus().XLCHeight)
         {
             // Solve sha256d.
-            while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus())) {
+            while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits,false, Params().GetConsensus())) {
                 pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
                 --nMaxTries;
             }
@@ -176,7 +176,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
                     pblock->nSolution = soln;
                     // TODO(h4x3rotab): Add metrics counter like Zcash? `solutionTargetChecks.increment();`
                     // TODO(h4x3rotab): Maybe switch to EhBasicSolve and better deal with `nMaxTries`?
-                    return CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits, Params().GetConsensus());
+                    return CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits,true, Params().GetConsensus());
                 };
                 bool found = EhBasicSolveUncancellable(n, k, curr_state, validBlock);
                 --nMaxTries;
@@ -449,7 +449,8 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
                 throw JSONRPCError(RPC_TYPE_ERROR, "Missing data String key for proposal");
 
             CBlock block;
-            if (!DecodeHexBlk(block, dataval.get_str()))
+            bool legacy_format = (strMode == "proposal_legacy");
+            if (!DecodeHexBlk(block, dataval.get_str(),legacy_format))
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
@@ -775,7 +776,11 @@ UniValue submitblock(const JSONRPCRequest& request)
 
     std::shared_ptr<CBlock> blockptr = std::make_shared<CBlock>();
     CBlock& block = *blockptr;
-    if (!DecodeHexBlk(block, request.params[0].get_str())) {
+    bool legacy_format = false;
+    if (request.params.size() == 3 && request.params[2].get_bool() == true) {
+        legacy_format = true;
+    }
+    if (!DecodeHexBlk(block, request.params[0].get_str(), legacy_format)) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 

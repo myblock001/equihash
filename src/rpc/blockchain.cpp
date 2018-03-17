@@ -114,9 +114,14 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     if (chainActive.Contains(blockindex))
         confirmations = chainActive.Height() - blockindex->nHeight + 1;
     result.push_back(Pair("confirmations", confirmations));
-    result.push_back(Pair("strippedsize", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS)));
-    result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
-    result.push_back(Pair("weight", (int)::GetBlockWeight(block)));
+
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    int ser_flags = (blockindex->nHeight < consensusParams.XLCHeight) ? SERIALIZE_BLOCK_LEGACY : 0;
+    result.push_back(Pair("strippedsize",
+                          (int)::GetSerializeSize(block, SER_NETWORK,
+                                                  PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS | ser_flags)));
+    result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION | ser_flags)));
+    result.push_back(Pair("weight", (int)::GetBlockWeight(block, consensusParams)));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", block.nVersion));
     result.push_back(Pair("versionHex", strprintf("%08x", block.nVersion)));
@@ -672,6 +677,11 @@ UniValue getblockheader(const JSONRPCRequest& request)
     if (!request.params[1].isNull())
         fVerbose = request.params[1].get_bool();
 
+    bool legacy_format = false;
+    if (request.params.size() == 3 && request.params[2].get_bool() == true) {
+        legacy_format = true;
+    }
+
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
@@ -679,7 +689,8 @@ UniValue getblockheader(const JSONRPCRequest& request)
 
     if (!fVerbose)
     {
-        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+        int ser_flags = legacy_format ? SERIALIZE_BLOCK_LEGACY : 0;
+        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION | ser_flags);
         ssBlock << pblockindex->GetBlockHeader();
         std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
         return strHex;
@@ -751,6 +762,11 @@ UniValue getblock(const JSONRPCRequest& request)
             verbosity = request.params[1].get_bool() ? 1 : 0;
     }
 
+    bool legacy_format = false;
+    if (request.params.size() == 3 && request.params[2].get_bool() == true) {
+        legacy_format = true;
+    }
+
     if (mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
@@ -770,7 +786,8 @@ UniValue getblock(const JSONRPCRequest& request)
 
     if (verbosity <= 0)
     {
-        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION | RPCSerializationFlags());
+        int ser_flags = legacy_format ? SERIALIZE_BLOCK_LEGACY : 0;
+        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION | ser_flags | RPCSerializationFlags());
         ssBlock << block;
         std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
         return strHex;
