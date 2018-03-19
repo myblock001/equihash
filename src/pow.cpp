@@ -19,7 +19,67 @@
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     assert(pindexLast != nullptr);
-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
+    int nHeight = pindexLast->nHeight + 1;
+    bool postfork = nHeight >= params.XLCHeight;
+    unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(postfork)).GetCompact();
+
+    if (postfork == false) {
+        return LitecoinGetNextWorkRequired(pindexLast, pblock, params);
+    }
+    else if (nHeight < params.XLCHeight + params.XLCPremineWindow) {
+        return nProofOfWorkLimit;
+    }
+    else if (nHeight < params.XLCHeight + params.XLCPremineWindow + params.nPowAveragingWindow){
+        return UintToArith256(params.powLimitStart).GetCompact();
+    }
+
+    const CBlockIndex* pindexFirst = pindexLast;
+    arith_uint256 bnTot {0};
+    for (int i = 0; pindexFirst && i < params.nPowAveragingWindow; i++) {
+        arith_uint256 bnTmp;
+        bnTmp.SetCompact(pindexFirst->nBits);
+        bnTot += bnTmp;
+        pindexFirst = pindexFirst->pprev;
+    }
+
+    if (pindexFirst == NULL)
+        return nProofOfWorkLimit;
+
+    arith_uint256 bnAvg {bnTot / params.nPowAveragingWindow};
+
+
+    return CalculateNextWorkRequired(bnAvg, pindexLast->GetMedianTimePast(), pindexFirst->GetMedianTimePast(), params);
+}
+
+unsigned int CalculateNextWorkRequired(arith_uint256 bnAvg, int64_t nLastBlockTime, int64_t nFirstBlockTime, const Consensus::Params& params)
+{
+
+    // Limit adjustment
+    int64_t nActualTimespan = nLastBlockTime - nFirstBlockTime;
+
+    if (nActualTimespan < params.MinActualTimespan())
+        nActualTimespan = params.MinActualTimespan();
+    if (nActualTimespan > params.MaxActualTimespan())
+        nActualTimespan = params.MaxActualTimespan();
+
+    // Retarget
+    const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit(true));
+    arith_uint256 bnNew {bnAvg};
+    bnNew /= params.AveragingWindowTimespan();
+    bnNew *= nActualTimespan;
+
+    if (bnNew > bnPowLimit)
+        bnNew = bnPowLimit;
+
+    return bnNew.GetCompact();
+}
+
+
+
+unsigned int LitecoinGetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
+{
+    assert(pindexLast != nullptr);
+    unsigned int nProofOfWorkLimit = UintToArith256(params.PowLimit(false)).GetCompact();
 
     // Only change once per difficulty adjustment interval
     if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
@@ -57,20 +117,20 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
     assert(pindexFirst);
 
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+    return LitecoinCalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
 }
 
-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
+unsigned int LitecoinCalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
 
     // Limit adjustment step
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
-    if (nActualTimespan < params.nPowTargetTimespan/4)
-        nActualTimespan = params.nPowTargetTimespan/4;
-    if (nActualTimespan > params.nPowTargetTimespan*4)
-        nActualTimespan = params.nPowTargetTimespan*4;
+    if (nActualTimespan < params.nPowTargetTimespanLegacy/4)
+        nActualTimespan = params.nPowTargetTimespanLegacy/4;
+    if (nActualTimespan > params.nPowTargetTimespanLegacy*4)
+        nActualTimespan = params.nPowTargetTimespanLegacy*4;
 
     // Retarget
     arith_uint256 bnNew;
@@ -78,12 +138,12 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     bnNew.SetCompact(pindexLast->nBits);
     bnOld = bnNew;
     // Litecoin: intermediate uint256 can overflow by 1 bit
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
+    const arith_uint256 bnPowLimit = UintToArith256(params.PowLimit((false)));
     bool fShift = bnNew.bits() > bnPowLimit.bits() - 1;
     if (fShift)
         bnNew >>= 1;
     bnNew *= nActualTimespan;
-    bnNew /= params.nPowTargetTimespan;
+    bnNew /= params.nPowTargetTimespanLegacy;
     if (fShift)
         bnNew <<= 1;
 
@@ -131,7 +191,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, bool postfork, const Con
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 
     // Check range
-    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.PowLimit(postfork)))
         return false;
 
     // Check proof of work matches claimed amount
