@@ -2837,7 +2837,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         return true;
 
     // Check that the header is valid (particularly PoW).  This is mostly
-    // redundant with the call in AcceptBlockHeader.
+    // redundant with the call in .
     if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
         return false;
 

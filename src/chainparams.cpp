@@ -97,7 +97,7 @@ public:
         consensus.powLimitLegacy = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // hard fork
-        consensus.XLCHeight = 491407; // Around 10/25/2017 12:00 UTC
+        consensus.XLCHeight = 1385888; // Around 10/25/2017 12:00 UTC
         consensus.XLCPremineWindow = 8000;
         consensus.XLCPremineEnforceWhitelist = true;
 
@@ -222,11 +222,11 @@ public:
         consensus.powLimitStart = uint256S("0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimitLegacy = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
+
         // hard fork
-        consensus.XLCHeight = 100;
+        consensus.XLCHeight = 111110003;
         consensus.XLCPremineWindow = 50;
         consensus.XLCPremineEnforceWhitelist = false;
-
         const size_t N = 200, K = 9;  // Same as mainchain.
         BOOST_STATIC_ASSERT(equihash_parameters_acceptable(N, K));
         nEquihashN = N;
@@ -328,7 +328,7 @@ public:
         consensus.powLimitLegacy = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
         // hard fork
-        consensus.XLCHeight = 3000;
+        consensus.XLCHeight = 100;
         consensus.XLCPremineWindow = 10;
         consensus.XLCPremineEnforceWhitelist = false;
         consensus.nPowAveragingWindow = 30;
@@ -370,7 +370,7 @@ public:
         nPruneAfterHeight = 1000;
 
         genesis = CreateGenesisBlock(1296688602, 0, 0x207fffff, 1, 50 * COIN);
-        consensus.hashGenesisBlock = genesis.GetHash();
+        consensus.hashGenesisBlock = genesis.GetHash(consensus);
         assert(consensus.hashGenesisBlock == uint256S("0x530827f38f93b43ed12af0b3ad25a288dc02ed74d6d7857862df51fc56c416f9"));
         assert(genesis.hashMerkleRoot == uint256S("0x97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9"));
 

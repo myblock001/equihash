@@ -137,7 +137,7 @@ UniValue getnetworkhashps(const JSONRPCRequest& request)
         }
         if (pblock->nHeight < (uint32_t)params.GetConsensus().XLCHeight)
         {
-            // Solve sha256d.
+            // Solve scrypt.
             while (nMaxTries > 0 && pblock->nNonce.GetUint64(0) < nInnerLoopCount && !CheckProofOfWork(pblock->GetPoWHash(), pblock->nBits,false, Params().GetConsensus())) {
                 pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
                 --nMaxTries;
