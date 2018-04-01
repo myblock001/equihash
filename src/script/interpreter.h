@@ -106,6 +106,14 @@ enum
     // Public keys in segregated witness scripts must be compressed
     //
     SCRIPT_VERIFY_WITNESS_PUBKEYTYPE = (1U << 15),
+
+    // FORKID should be enabled by default
+    //
+    //SCRIPT_ENABLE_SIGHASH_FORKID = (1U << 16),
+
+    // Allow NON_FORKID in legacy tests and blocks under BTG hard fork height
+    //
+    SCRIPT_ALLOW_NON_FORKID = (1U << 17),
 };
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);

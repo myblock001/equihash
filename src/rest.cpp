@@ -131,9 +131,9 @@ static bool rest_headers(HTTPRequest* req,
     std::vector<std::string> path;
     boost::split(path, param, boost::is_any_of("/"));
 
-    if (path.size() != 2)
-        return RESTERR(req, HTTP_BAD_REQUEST, "No header count specified. Use /rest/headers/<count>/<hash>.<ext>.");
-
+    if (path.size() != 2 && (path.size() != 3 || path[0] != "legacy")) {
+        return RESTERR(req, HTTP_BAD_REQUEST, "No header count specified. Use /rest/headers/<count>/<hash>.<ext> or /rest/headers/legacy/<count>/<hash>.<ext>.");
+    }                           //use old rule if URI=/legacy/<COUNT>/<BLOCK-HASH>
     std::string headerCount,hashStr;
     bool legacy_format = false;
     if (path.size() == 2) {

@@ -361,7 +361,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
                 "\nArguments:\n"
                 "1. template_request         (json object, optional) A json object in the following spec\n"
                 "     {\n"
-                "       \"mode\":\"template\"    (string, optional) This must be set to \"template\", \"proposal\" (see BIP 23), or omitted\n"
+                "       \"mode\":\"template\"    (string, optional) This must be set to \"template\", \"proposal\" (see BIP 23), \"proposal_legacy\", or omitted\n"
                 "       \"capabilities\":[     (array, optional) A list of strings\n"
                 "           \"support\"          (string) client side supported feature, 'longpoll', 'coinbasetxn', 'coinbasevalue', 'proposal', 'serverlist', 'workid'\n"
                 "           ,...\n"
@@ -762,7 +762,7 @@ UniValue submitblock(const JSONRPCRequest& request)
     // We allow 2 arguments for compliance with BIP22. Argument 2 is ignored.
     if (request.fHelp || request.params.size() < 1 || request.params.size() > 2) {
         throw std::runtime_error(
-                    "submitblock \"hexdata\"  ( \"dummy\" )\n"
+                    "submitblock \"hexdata\"  ( \"dummy\" \"legacy\" )\n"
                     "\nAttempts to submit new block to network.\n"
                     "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\n"
 
